@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROTC Intelligence System</title>
+    <style>
+        :root {
+            --neon-blue: #00d4ff;
+            --pink-accent: #ff47bc;
+            --gold: #c5a059;
+            --dark-bg: #0b0e14;
+            --card-bg: #161b22;
+            --border: #333;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--dark-bg);
+            color: #e6edf3;
+        }
+
+        /* LOGIN OVERLAY */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .auth-box {
+            background: var(--card-bg); padding: 3rem; border-radius: 15px;
+            border: 1px solid var(--gold); width: 350px; text-align: center;
+        }
+
+        /* UI LAYOUT */
+        .nav {
+            padding: 1rem 5%; display: flex; justify-content: space-between;
+            align-items: center; background: #161b22; border-bottom: 1px solid var(--border);
+        }
+        .container { max-width: 1100px; margin: 20px auto; padding: 20px; }
+
+        /* FEATURES SECTION */
+        .feature-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem; margin-bottom: 3rem;
+        }
+        .f-card {
+            background: #0d1117; padding: 1.5rem; border-radius: 10px;
+            border-left: 5px solid var(--neon-blue); border: 1px solid var(--border);
+        }
+        .f-card h4 { color: var(--neon-blue); margin-top: 0; text-transform: uppercase; }
+
+        /* FORM & TABLE */
+        input, select {
+            background: #0d1117; color: white; border: 1px solid var(--border);
+            padding: 12px; border-radius: 6px; margin: 10px 0; width: 100%; box-sizing: border-box;
+        }
+        button {
+            background: var(--neon-blue); color: #000; border: none;
+            padding: 12px 24px; border-radius: 6px; font-weight: bold;
+            cursor: pointer; text-transform: uppercase; width: 100%;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; color: var(--gold); border-bottom: 2px solid var(--gold); padding: 15px; }
+        td { padding: 12px 15px; border-bottom: 1px solid #21262d; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    {% if not logged_in %}
+    <div class="overlay">
+        <div class="auth-box" id="login-form">
+            <h2 style="color: var(--gold)">COMMAND LOGIN</h2>
+            <input type="text" id="user" placeholder="Username">
+            <input type="password" id="pass" placeholder="Password">
+            <button onclick="handleAuth('/login')">Authorize</button>
+            <p style="font-size: 0.8rem; margin-top: 15px;">
+                New Cadet? <span style="color: var(--neon-blue); cursor: pointer;" onclick="toggleAuth(true)">Register Here</span>
+            </p>
+        </div>
+
+        <div class="auth-box hidden" id="register-form">
+            <h2 style="color: var(--pink-accent)">CADET REGISTRATION</h2>
+            <input type="text" id="reg-user" placeholder="New Username">
+            <input type="password" id="reg-pass" placeholder="New Password">
+            <button onclick="handleAuth('/register')" style="background: var(--pink-accent)">Create Account</button>
+            <p style="font-size: 0.8rem; margin-top: 15px;">
+                Already have an account? <span style="color: var(--neon-blue); cursor: pointer;" onclick="toggleAuth(false)">Login</span>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="nav">
+        <h1 style="font-size: 1.2rem; color: var(--gold); margin: 0;">🎖 ROTC MONITORING SYSTEM</h1>
+        {% if logged_in %}
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span>User: <strong>{{ session['user'] }}</strong></span>
+            <a href="/logout" style="color: var(--pink-accent); text-decoration: none; font-weight: bold;">LOGOUT</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="container">
+        <h2 style="text-align: center;">Features</h2>
+        <p style="text-align: center; color: #888; margin-bottom: 30px;">Optimized ROTC Logistics using Python PyMySQL</p>
+        
+        <div class="feature-grid">
+            <div class="f-card">
+                <h4>Optimized for Best Performance</h4>
+                <p>Optimized with Python's Gunicorn and <strong>PyMySQL</strong> library, providing quick queries and requests.</p>
+            </div>
+            <div class="f-card">
+                <h4>Basic CRUD Operations</h4>
+                <p>Basic Create, Read, Update, and Delete operations for unit monitoring.</p>
+            </div>
+            <div class="f-card">
+                <h4>User Login</h4>
+                <p>Simple permission management to manage users securely.</p>
+            </div>
+        </div>
+
+        <div class="f-card" style="border-left-color: var(--gold);">
+            <h3>{{ 'Global Attendance Monitor' if role == 'admin' else 'My Attendance Log' }}</h3>
+            
+            {% if role != 'admin' %}
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="cadetName" placeholder="Full Name">
+                <input type="text" id="cadetRank" placeholder="Rank (e.g. Cadet)">
+                <button onclick="submitAttendance()" style="width: 250px;">Log Record</button>
+            </div>
+            {% endif %}
+
+            <table>
+                <thead>
+                    <tr>
+                        {% if role == 'admin' %}<th>Source User</th>{% endif %}
+                        <th>Name</th><th>Rank</th><th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    {% for rec in records %}
+                    <tr>
+                        {% if role == 'admin' %}<td>{{ rec.username }}</td>{% endif %}
+                        <td>{{ rec.name }}</td><td>{{ rec.rank }}</td><td>{{ rec.date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function toggleAuth(showReg) {
+            document.getElementById('login-form').classList.toggle('hidden', showReg);
+            document.getElementById('register-form').classList.toggle('hidden', !showReg);
+        }
+
+        async function handleAuth(path) {
+            const user = document.getElementById(path === '/login' ? 'user' : 'reg-user').value;
+            const pass = document.getElementById(path === '/login' ? 'pass' : 'reg-pass').value;
+
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: user, password: pass})
+            });
+
+            if (res.ok) {
+                if (path === '/register') {
+                    alert("Registration Successful! Please login.");
+                    toggleAuth(false);
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                alert("Action Failed. Please check your inputs.");
+            }
+        }
+
+        async function submitAttendance() {
+            const data = {
+                name: document.getElementById('cadetName').value,
+                rank: document.getElementById('cadetRank').value,
+                date: new Date().toLocaleDateString()
+            };
+
+            const res = await fetch('/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) window.location.reload();
+        }
+    </script>
+</body>
+</html>
