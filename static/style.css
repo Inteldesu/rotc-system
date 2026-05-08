@@ -1,134 +1,88 @@
-/* GLOBAL STYLES */
-body {
-    background-color: #1a1b1a; /* Dark tactical grey */
-    color: #d1d7d1;
-    font-family: 'Courier New', Courier, monospace; /* Monospace for military feel */
-    margin: 0;
-    padding: 20px;
-    line-height: 1.6;
+/* style.css */
+
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:url('https://images.unsplash.com/photo-1521412644187-c49fa049e84d?q=80&w=1200') no-repeat center center/cover;
 }
 
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-    border: 2px solid #3e4a3e;
-    padding: 20px;
-    background: #232623;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+.overlay{
+    background:rgba(0,0,0,0.75);
+    min-height:100vh;
+    padding:30px;
 }
 
-/* HEADER & USER INFO */
-header {
-    border-bottom: 3px double #4b534b;
-    padding-bottom: 10px;
-    margin-bottom: 30px;
+.container{
+    width:90%;
+    margin:auto;
 }
 
-h1 {
-    color: #78866b; /* Olive Drab */
-    letter-spacing: 2px;
-    margin: 0;
+h1{
+    text-align:center;
+    color:#ffd700;
+    margin-bottom:10px;
 }
 
-.user-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.85rem;
-    margin-top: 10px;
-    color: #a3b1a3;
+.course{
+    text-align:center;
+    color:white;
+    margin-bottom:30px;
 }
 
-/* BUTTONS */
-.btn-logout {
-    color: #ff4444;
-    text-decoration: none;
-    border: 1px solid #ff4444;
-    padding: 5px 10px;
-    transition: all 0.3s;
+.card{
+    background:rgba(255,255,255,0.95);
+    padding:20px;
+    border-radius:10px;
+    margin-bottom:25px;
+    border-left:8px solid darkgreen;
 }
 
-.btn-logout:hover {
-    background: #ff4444;
-    color: white;
+h2{
+    color:darkgreen;
 }
 
-.btn-primary {
-    background-color: #556b2f;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
+input, select{
+    padding:10px;
+    margin:8px;
+    width:220px;
+    border-radius:5px;
+    border:1px solid #ccc;
 }
 
-.btn-primary:hover {
-    background-color: #6b8e23;
+button{
+    padding:10px 20px;
+    background:darkgreen;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
 }
 
-/* FORMS */
-.tactical-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+button:hover{
+    background:green;
 }
 
-input {
-    background: #121212;
-    border: 1px solid #4b534b;
-    color: #00ff00; /* Radar green text */
-    padding: 10px;
-    flex: 1;
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
 }
 
-input:focus {
-    outline: none;
-    border-color: #78866b;
+table, th, td{
+    border:1px solid #999;
 }
 
-/* TABLES */
-.table-wrapper {
-    overflow-x: auto;
+th{
+    background:darkgreen;
+    color:white;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    border: 1px solid #3e4a3e;
+th, td{
+    padding:12px;
+    text-align:center;
 }
 
-th {
-    background-color: #3e4a3e;
-    color: #ffffff;
-    text-align: left;
-    padding: 12px;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-}
-
-td {
-    padding: 10px;
-    border-bottom: 1px solid #2d332d;
-}
-
-tr:nth-child(even) {
-    background-color: #2a2e2a;
-}
-
-tr:hover {
-    background-color: #353b35; /* Subtle highlight on hover */
-}
-
-.rank-cell {
-    font-weight: bold;
-    color: #e0a800; /* Gold/Bronze for ranks */
-}
-
-h3 {
-    border-left: 5px solid #556b2f;
-    padding-left: 10px;
-    color: #a3b1a3;
-    text-transform: uppercase;
+.summary{
+    font-size:18px;
+    color:#222;
 }
