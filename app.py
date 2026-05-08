@@ -1,16 +1,16 @@
-# app.py
-from flask import Flask, render_template, request, jsonify, session, redirect
+from flask import Flask, request, session, redirect, render_template
 import pymysql
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'rotc_direct_mysql_key'
 
-# MYSQL CONFIGURATION
+# DB CONFIG
 db_config = {
     'host': 'localhost',
-    'user': 'root',
-    'password': '',
+    'user': 'ali',
+    'password': 'toshinoukyouko',
     'database': 'rotc_db',
     'cursorclass': pymysql.cursors.DictCursor
 }
@@ -18,103 +18,135 @@ db_config = {
 def get_db():
     return pymysql.connect(**db_config)
 
-# INITIALIZE DATABASE AND TABLES
+# INIT DB
+# Matches your SQL schema (users + attendance with FK)
 def init_db():
     conn = get_db()
     with conn.cursor() as cursor:
-        # Create Users Table
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
-                role VARCHAR(20) DEFAULT 'cadet'
+                role VARCHAR(20) DEFAULT 'cadet',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Create Attendance Table
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS attendance (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50),
-                name VARCHAR(100),
+                name VARCHAR(100) NOT NULL,
                 rank VARCHAR(50),
-                date VARCHAR(50)
+                date VARCHAR(50),
+                FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
             )
         """)
-        # Create Owner (admin123 / 12345678)
-        cursor.execute("SELECT * FROM users WHERE username = 'admin123'")
+
+        # Ensure admin exists (matches your SQL: admin / koishi)
+        cursor.execute("SELECT * FROM users WHERE username=%s", ('admin',))
         if not cursor.fetchone():
-            hashed_pw = generate_password_hash('12345678')
-            cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
-                           ('admin123', hashed_pw, 'admin'))
+            cursor.execute(
+                "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+                ('admin', generate_password_hash('koishi'), 'admin')
+            )
+
     conn.commit()
     conn.close()
 
-# AUTH ROUTES
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.json
+# ---------------- HOME ----------------
+@app.route('/')
+def home():
+    if 'user' not in session:
+        return redirect('/login')
+
     conn = get_db()
     with conn.cursor() as cursor:
-        cursor.execute("SELECT * FROM users WHERE username = %s", (data['username'],))
+        if session.get('role') == 'admin':
+            cursor.execute("SELECT * FROM attendance")
+        else:
+            cursor.execute("SELECT * FROM attendance WHERE username=%s", (session['user'],))
+        records = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        'index.html',
+        user=session['user'],
+        role=session['role'],
+        records=records
+    )
+
+# ---------------- LOGIN ----------------
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
         user = cursor.fetchone()
     conn.close()
 
-    if user and check_password_hash(user['password'], data['password']):
+    if user and user['password'] == password:
         session['user'] = user['username']
         session['role'] = user['role']
-        return jsonify({"success": True})
-    return jsonify({"success": False}), 401
+        return redirect('/')
 
+    return "LOGIN FAILED"
+
+# ---------------- REGISTER ----------------
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.json
+    username = request.form.get('username')
+    password = request.form.get('password')
+
     conn = get_db()
     try:
         with conn.cursor() as cursor:
-            hashed = generate_password_hash(data['password'])
-            cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (data['username'], hashed))
+            cursor.execute(
+                "INSERT INTO users (username, password) VALUES (%s, %s)",
+                (username, generate_password_hash(password))
+            )
         conn.commit()
-        return jsonify({"success": True})
+        return redirect('/login')
     except:
-        return jsonify({"success": False, "message": "User exists"}), 400
+        return "USER EXISTS"
     finally:
         conn.close()
 
-# DATA ROUTES
-@app.route('/')
-def home():
-    logged_in = 'user' in session
-    role = session.get('role', 'cadet')
-    records = []
-    if logged_in:
-        conn = get_db()
-        with conn.cursor() as cursor:
-            if role == 'admin':
-                cursor.execute("SELECT * FROM attendance")
-            else:
-                cursor.execute("SELECT * FROM attendance WHERE username = %s", (session['user'],))
-            records = cursor.fetchall()
-        conn.close()
-    return render_template('index.html', logged_in=logged_in, role=role, records=records)
-
+# ---------------- ADD ATTENDANCE ----------------
 @app.route('/add', methods=['POST'])
 def add():
-    if 'user' not in session: return jsonify({"error": "No Auth"}), 401
-    data = request.json
+    if 'user' not in session:
+        return redirect('/login')
+
+    name = request.form.get('name')
+    rank = request.form.get('rank')
+
     conn = get_db()
     with conn.cursor() as cursor:
-        cursor.execute("INSERT INTO attendance (username, name, rank, date) VALUES (%s, %s, %s, %s)", 
-                       (session['user'], data['name'], data['rank'], data['date']))
+        cursor.execute("""
+            INSERT INTO attendance (username, name, rank, date)
+            VALUES (%s, %s, %s, %s)
+        """, (session['user'], name, rank, str(date.today())))
+
     conn.commit()
     conn.close()
-    return jsonify({"success": True})
 
+    return redirect('/')
+
+# ---------------- LOGOUT ----------------
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect('/')
+    return redirect('/login')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
