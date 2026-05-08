@@ -1,44 +1,125 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ROTC System</title>
+  <meta charset="UTF-8">
+  <title>ROTC Monitoring System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+<div class="overlay">
+  <div class="container">
+    <h1>🎖 ROTC Attendance & Equipment Monitoring System</h1>
+    <p class="course">Welcome, {{ session['user'] }}! | <a href="/logout" style="color:white">Logout</a></p>
 
-<h2>ROTC SYSTEM</h2>
-<p>User: {{ user }} | Role: {{ role }}</p>
+    <div class="card">
+  <h2>Cadet Attendance</h2>
+  <form action="/add_attendance" method="POST">
+    
+    <input type="text" name="cadetName" id="cadetName" placeholder="Cadet Name" required>
 
-<a href="/logout">Logout</a>
+    <select name="rank" id="rank" required>
+      <option value="">Select Rank</option>
+      <option>Cadet</option>
+      <option>Corporal</option>
+      <option>Sergeant</option>
+      <option>Lieutenant</option>
+    </select>
 
-<hr>
+    <select name="platoon" id="platoon" required>
+      <option value="">Select Platoon</option>
+      <option>Alpha</option>
+      <option>Bravo</option>
+      <option>Charlie</option>
+    </select>
 
-<h3>Add Attendance</h3>
-<form method="POST" action="/add">
-    <input name="name" placeholder="Name" required>
-    <input name="rank" placeholder="Rank" required>
-    <button type="submit">Add</button>
-</form>
+    <select name="status" id="status" required>
+      <option value="">Attendance Status</option>
+      <option>Present</option>
+      <option>Late</option>
+      <option>Absent</option>
+    </select>
 
-<hr>
+    <input type="date" name="attendanceDate" id="attendanceDate" required>
 
-<h3>Records</h3>
-<table border="1">
-    <tr>
-        {% if role == 'admin' %}<th>User</th>{% endif %}
-        <th>Name</th>
-        <th>Rank</th>
-        <th>Date</th>
-    </tr>
+    <button type="submit">Add Attendance</button>
+  </form>
 
-    {% for r in records %}
-    <tr>
-        {% if role == 'admin' %}<td>{{ r.username }}</td>{% endif %}
-        <td>{{ r.name }}</td>
-        <td>{{ r.rank }}</td>
-        <td>{{ r.date }}</td>
-    </tr>
-    {% endfor %}
-</table>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Rank</th><th>Platoon</th><th>Status</th><th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in attendance %}
+      <tr>
+        <td>{{ row.name }}</td>
+        <td>{{ row.rank }}</td>
+        <td>{{ row.platoon }}</td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.date_recorded }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
+<div class="card">
+  <h2>Borrow Equipment</h2>
+  <form action="/add_equipment" method="POST">
+    
+    <input type="text" name="borrowerName" id="borrowerName" placeholder="Cadet Name" required>
+
+    <select name="equipment" id="equipment" required>
+      <option value="">Select Equipment</option>
+      <option>Helmet</option>
+      <option>Rifle Replica</option>
+      <option>Boots</option>
+      <option>Uniform</option>
+      <option>Radio</option>
+    </select>
+
+    <input type="number" name="quantity" id="quantity" placeholder="Quantity" required>
+
+    <input type="date" name="borrowDate" id="borrowDate" required>
+
+    <button type="submit">Borrow</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Cadet</th>
+        <th>Equipment</th>
+        <th>Quantity</th>
+        <th>Date Borrowed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in equipment %}
+      <tr>
+        <td>{{ item.borrower }}</td>
+        <td>{{ item.item }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.borrow_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Database Management Summary</h2>
+
+  <div class="summary">
+    <p>Total Attendance Records: 
+      <span id="attendanceCount" style="color: rgb(148, 13, 135); font-weight: bold;">{{ total_att }}</span>
+    </p>
+
+    <p>Total Equipment Borrowed: 
+      <span id="equipmentCount" style="color: rgb(190, 0, 142); font-weight: bold;">{{ total_eq }}</span>
+    </p>
+  </div>
+</div>
 </body>
 </html>

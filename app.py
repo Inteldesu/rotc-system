@@ -1,152 +1,143 @@
-from flask import Flask, request, session, redirect, render_template
+from flask import Flask, render_template, request, redirect, session, url_for
 import pymysql
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import date
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+db_server = os.getenv("DB_SERVER", "localhost")
+db_user = os.getenv("DB_USER", 'root')
+db_password = os.getenv("DB_PASSWORD", "")
+db_databasename = os.getenv("DB_DATABASE", "athlete_dashboard")
+db_port = int(os.getenv("DB_PORT", 6969))
 
 app = Flask(__name__)
 app.secret_key = 'rotc_direct_mysql_key'
 
-# DB CONFIG
+# Database Configuration
 db_config = {
-    'host': 'localhost',
-    'user': 'ali',
-    'password': 'toshinoukyouko',
-    'database': 'rotc_db',
+    'host': db_server,
+    'user': db_user,
+    'password': db_password,
+    'database': db_databasename,
     'cursorclass': pymysql.cursors.DictCursor
 }
 
 def get_db():
     return pymysql.connect(**db_config)
 
-# INIT DB
-# Matches your SQL schema (users + attendance with FK)
-def init_db():
-    conn = get_db()
-    with conn.cursor() as cursor:
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                role VARCHAR(20) DEFAULT 'cadet',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS attendance (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50),
-                name VARCHAR(100) NOT NULL,
-                rank VARCHAR(50),
-                date VARCHAR(50),
-                FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
-            )
-        """)
-
-        # Ensure admin exists (matches your SQL: admin / koishi)
-        cursor.execute("SELECT * FROM users WHERE username=%s", ('admin',))
-        if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-                ('admin', generate_password_hash('koishi'), 'admin')
-            )
-
-    conn.commit()
-    conn.close()
-
-# ---------------- HOME ----------------
 @app.route('/')
-def home():
+@app.route('/')
+def index():
     if 'user' not in session:
-        return redirect('/login')
-
+        return redirect(url_for('login'))
+    
     conn = get_db()
     with conn.cursor() as cursor:
-        if session.get('role') == 'admin':
-            cursor.execute("SELECT * FROM attendance")
-        else:
-            cursor.execute("SELECT * FROM attendance WHERE username=%s", (session['user'],))
-        records = cursor.fetchall()
+        # Fetch data for tables
+        cursor.execute("SELECT * FROM attendance")
+        att_records = cursor.fetchall()
+        
+        cursor.execute("SELECT * FROM equipment")
+        eq_records = cursor.fetchall()
+
+        # --- NEW: CALCULATE TOTALS ---
+        # Count attendance rows
+        total_attendance = len(att_records)
+        
+        # Sum the 'quantity' column for equipment
+        cursor.execute("SELECT SUM(quantity) AS total_qty FROM equipment")
+        result = cursor.fetchone()
+        total_equipment = result['total_qty'] if result['total_qty'] else 0
+
     conn.close()
+    
+    return render_template('index.html', 
+                           attendance=att_records, 
+                           equipment=eq_records,
+                           total_att=total_attendance,
+                           total_eq=total_equipment,
+                           user=session['user'])
 
-    return render_template(
-        'index.html',
-        user=session['user'],
-        role=session['role'],
-        records=records
-    )
-
-# ---------------- LOGIN ----------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'GET':
-        return render_template('login.html')
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        conn = get_db()
+        with conn.cursor() as cursor:
+            # Plain text comparison
+            cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (username, password))
+            user = cursor.fetchone()
+        conn.close()
 
-    username = request.form.get('username')
-    password = request.form.get('password')
+        if user:
+            session['user'] = user['username']
+            return redirect(url_for('index'))
+        return "Invalid Username or Password"
+    return render_template('login.html')
 
-    conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
-        user = cursor.fetchone()
-    conn.close()
-
-    if user and user['password'] == password:
-        session['user'] = user['username']
-        session['role'] = user['role']
-        return redirect('/')
-
-    return "LOGIN FAILED"
-
-# ---------------- REGISTER ----------------
 @app.route('/register', methods=['POST'])
 def register():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    username = request.form['username']
+    password = request.form['password'] # Stored as plain text
+    
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        conn.commit()
+    except:
+        return "User registration failed (User might already exist)"
+    finally:
+        conn.close()
+    return redirect(url_for('login'))
+
+@app.route('/add_attendance', methods=['POST'])
+def add_attendance():
+    if 'user' not in session: return redirect(url_for('login'))
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO attendance (name, rank, platoon, status, date_recorded, submitted_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (request.form['cadetName'], request.form['rank'], request.form['platoon'], 
+              request.form['status'], request.form['attendanceDate'], session['user']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('index'))
+
+@app.route('/add_equipment', methods=['POST'])
+def add_equipment():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    # Get values from the HTML form 'name' attributes
+    borrower_val = request.form.get('borrowerName')
+    equipment_item = request.form.get('equipment')
+    qty = request.form.get('quantity')
+    b_date = request.form.get('borrowDate')
 
     conn = get_db()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO users (username, password) VALUES (%s, %s)",
-                (username, generate_password_hash(password))
-            )
+            # The words inside (borrower, item, quantity...) MUST match the SQL columns
+            cursor.execute("""
+                INSERT INTO equipment (borrower, item, quantity, borrow_date, submitted_by)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (borrower_val, equipment_item, qty, b_date, session['user']))
         conn.commit()
-        return redirect('/login')
-    except:
-        return "USER EXISTS"
     finally:
         conn.close()
 
-# ---------------- ADD ATTENDANCE ----------------
-@app.route('/add', methods=['POST'])
-def add():
-    if 'user' not in session:
-        return redirect('/login')
+    return redirect(url_for('index'))
 
-    name = request.form.get('name')
-    rank = request.form.get('rank')
-
-    conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("""
-            INSERT INTO attendance (username, name, rank, date)
-            VALUES (%s, %s, %s, %s)
-        """, (session['user'], name, rank, str(date.today())))
-
-    conn.commit()
-    conn.close()
-
-    return redirect('/')
-
-# ---------------- LOGOUT ----------------
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect('/login')
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=db_port)

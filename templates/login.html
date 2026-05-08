@@ -1,30 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROTC Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-<h2>LOGIN</h2>
+<div class="overlay">
+    <div class="container" style="max-width: 500px; margin-top: 50px;">
+        
+        <h1>🎖 ROTC System Access</h1>
+        <p class="course">Secure Command & Control Portal</p>
 
-<form method="POST">
-    <input name="username" placeholder="Username" required>
-    <br><br>
-    <input type="password" name="password" placeholder="Password" required>
-    <br><br>
-    <button type="submit">Login</button>
-</form>
+        <div class="card">
+            <h2>Authentication</h2>
+            <form method="POST" action="/login">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <br>
+                <button type="submit" style="width: 100%; margin-top: 10px;">Authorize Login</button>
+            </form>
+        </div>
 
-<hr>
+        <div class="card" style="border-left: 8px solid #ffd700;">
+            <h2>Personnel Enrollment</h2>
+            <form action="/register" method="POST">
+                <input type="text" name="username" placeholder="New Username" required>
+                <input type="password" name="password" placeholder="New Password" required>
+                <br>
+                <button type="submit" style="width: 100%; margin-top: 10px; background: #8b0000;">Register Personnel</button>
+            </form>
+        </div>
 
-<h3>Register</h3>
-<form action="/register" method="POST">
-    <input name="username" placeholder="Username" required>
-    <br><br>
-    <input type="password" name="password" placeholder="Password" required>
-    <br><br>
-    <button type="submit">Register</button>
-</form>
+    </div>
+</div>
 
 </body>
 </html>
