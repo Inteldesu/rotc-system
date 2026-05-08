@@ -1,0 +1,58 @@
+<div class="team-section-header">
+    <h2>The Development Team</h2>
+    <p>
+        Meet the students behind the system — developers, testers, and the sleep-deprived people responsible for making everything somehow work.
+    </p>
+</div>
+
+<div class="member-grid">
+{% for member in members %}
+
+<div class="member-card" style="--accent: {{ member['accent_color'] }}">
+
+    <div class="member-header">
+
+        <img class="member-avatar"
+             src="{{ member['profile_image_path'] }}"
+             alt="{{ member['full_name'] }}">
+
+        <div>
+            <h3 class="member-name">
+                {{ member['full_name'] }}
+            </h3>
+
+            <div class="member-username">
+                @{{ member['username'] }}
+            </div>
+
+            <div class="member-role">
+                {{ member['role'] }}
+            </div>
+        </div>
+
+    </div>
+
+    <p class="member-about">
+        {{ member['about_me'] }}
+    </p>
+
+    <div class="member-links">
+
+        {% if member['github_link'] %}
+        <a class="btn-gh" target="_blank" href="{{ member['github_link'] }}">
+            📂 GitHub
+        </a>
+        {% endif %}
+
+        {% if member['facebook_link'] %}
+        <a class="btn-fb" target="_blank" href="{{ member['facebook_link'] }}">
+            🔗 Facebook
+        </a>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endfor %}
+</div>

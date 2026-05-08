@@ -1,3 +1,4 @@
+from enum import member
 from flask import Flask, render_template, request, redirect, session, url_for
 import pymysql
 from dotenv import load_dotenv
@@ -50,6 +51,9 @@ def index():
         result = cursor.fetchone()
         total_equipment = result['total_qty'] if result['total_qty'] else 0
 
+        cursor.execute("SELECT * FROM team_members")
+        members = cursor.fetchall()
+
     conn.close()
     
     return render_template('index.html', 
@@ -57,7 +61,8 @@ def index():
                            equipment=eq_records,
                            total_att=total_attendance,
                            total_eq=total_equipment,
-                           user=session['user'])
+                           user=session['user'],
+                           members=members)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
